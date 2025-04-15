@@ -36,7 +36,7 @@ def busca(campo, busca):
     collection_ref = db.collection('clientes')
     resultados = []
 
-    if campo not in ['id', 'nome', 'cpf', 'status']:
+    if campo not in ['id', 'nome', 'cpf', 'status', 'plano']:
         return jsonify({'mensagem': 'ERRO! Campo não encontrado'}), 400
 
     if campo == 'status':
@@ -67,13 +67,18 @@ def busca(campo, busca):
 def adicionar_cliente():
     dados = request.json
 
-    if not dados.get("nome") or not dados.get("cpf") or not dados.get("status") or not dados.get("foto_url"):
+    if not dados.get("nome") or not dados.get("cpf") or not dados.get("status") or not dados.get("foto_url") or not dados.get("plano"):
         return jsonify({'mensagem':'Erro - Todos os campos são obrigatórios'}), 400
 
     # faz com que o status seja boolean
     status = dados['status']
     if isinstance(status, str):
         status = status.lower() == 'true'
+
+    #verifica se o plano está nas opções possíveis
+    plano = dados['plano'].lower()
+    if plano not in ['mensal', 'trimestral', 'semestral', 'anual']:
+        return jsonify({'mensagem': 'Erro - Plano inválido'}), 400
 
     #contador
     contador_ref = db.collection('controle_id').document('contador')
@@ -87,7 +92,8 @@ def adicionar_cliente():
         "nome": dados['nome'],
         "cpf": dados['cpf'],
         "foto_url": dados.get('foto_url', ''),  
-        "status": status
+        "status": status,
+        "plano": plano
     })
 
     return jsonify({'mensagem': 'Cliente cadastrado com sucesso!'}), 201
@@ -99,18 +105,24 @@ def adicionar_cliente():
 def alterar_cadastro(id):
     dados = request.json
 
-    if not dados.get("nome") or not dados.get("cpf") or not dados.get("status") or not dados.get("foto_url"):
+    if not dados.get("nome") or not dados.get("cpf") or not dados.get("status") or not dados.get("foto_url") or not dados.get("plano"):
         return jsonify({'mensagem':'Erro - Todos os campos são obrigatórios'}), 400
     
     doc_ref = db.collection('clientes').document(id)
     doc = doc_ref.get()
+
+#verifica se o plano está nas opções possíveis
+    plano = dados['plano'].lower()
+    if plano not in ['mensal', 'trimestral', 'semestral', 'anual']:
+        return jsonify({'mensagem': 'Erro - Plano inválido'}), 400
 
     if doc.exists:
         doc_ref.update({
             "nome": dados['nome'],
             "cpf": dados['cpf'],
             "foto_url": dados.get("foto_url", ""),
-            "status": dados['status']
+            "status": dados['status'],
+            "plano": dados ['plano']
         })
 
         return jsonify({'mensagem':'Cadastro atualizado com sucesso!'}), 201
