@@ -67,7 +67,7 @@ def busca(campo, busca):
 def adicionar_cliente():
     dados = request.json
 
-    if not dados.get("nome") or not dados.get("cpf") or not dados.get("status") or not dados.get("foto_url"):
+    if not dados.get("nome") or not dados.get("cpf") or not dados.get("status") :
         return jsonify({'mensagem':'Erro - Todos os campos são obrigatórios'}), 400
 
     # faz com que o status seja boolean
@@ -86,7 +86,6 @@ def adicionar_cliente():
         "id": novo_id,
         "nome": dados['nome'],
         "cpf": dados['cpf'],
-        "foto_url": dados.get('foto_url', ''),  
         "status": status
     })
 
@@ -99,7 +98,7 @@ def adicionar_cliente():
 def alterar_cadastro(id):
     dados = request.json
 
-    if not dados.get("nome") or not dados.get("cpf") or not dados.get("status") or not dados.get("foto_url"):
+    if "nome" not in dados or "cpf" not in dados or "status" not in dados:
         return jsonify({'mensagem':'Erro - Todos os campos são obrigatórios'}), 400
     
     doc_ref = db.collection('clientes').document(id)
@@ -109,7 +108,6 @@ def alterar_cadastro(id):
         doc_ref.update({
             "nome": dados['nome'],
             "cpf": dados['cpf'],
-            "foto_url": dados.get("foto_url", ""),
             "status": dados['status']
         })
 
