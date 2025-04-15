@@ -1,0 +1,151 @@
+#FAZER ROTA ID, E ARRUMAR ROTA DE LISTA
+import os,json
+import firebase_admin
+from firebase_admin import credentials, firestore
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+from dotenv import load_dotenv
+
+app = Flask(__name__)
+CORS(app)
+
+load_dotenv()
+
+#pega a variável de ambiente e converte para JSON
+FBKEY = json.loads(os.getenv('CONFIG_FIREBASE'))
+
+cred = credentials.Certificate(FBKEY)
+firebase_admin.initialize_app(cred)
+
+# Conectando com o firestore da firebase
+db = firestore.client()
+
+
+# ROTA PRINCIPAL DE TESTE
+@app.route('/')
+def index():
+    return 'API ON', 200
+    
+
+# MÉTODO GET - buscar clientes por campo
+@app.route('/clientes/<campo>/<busca>', methods=['GET'])
+def busca(campo, busca):
+  
+  # vai buscar os dados no bd e listar eles
+    db = firestore.client()
+    collection_ref = db.collection('clientes')
+    resultados = []
+
+    if campo not in ['id', 'nome', 'cpf', 'status']:
+        return jsonify({'mensagem': 'ERRO! Campo não encontrado'}), 400
+
+    if campo == 'status':
+        # converter para boolean se for o campo status
+        busca = busca.lower() == 'true'
+
+    #vai buscar no bd os items onde o campo for igual a busca do usuário
+    query = collection_ref.where(campo, '==', busca).stream()
+
+    # vai percorrer cada item da tabela e ver se bate com o pedido do usuario
+    for doc in query:
+        dados = doc.to_dict()
+        dados['id'] = doc.id
+        resultados.append(dados)
+
+    if resultados:
+        return jsonify(resultados), 200
+    else:
+        return jsonify({'mensagem': 'ERRO! Usuário não encontrado'}), 404
+
+
+
+
+
+
+
+
+# MÉTODO POST - cadastrar novo cliente
+@app.route('/clientes', methods=['POST'])
+def adicionar_cliente():
+    dados = request.json
+
+    if not dados.get("nome") or not dados.get("cpf") or not dados.get("status") :
+        return jsonify({'mensagem':'Erro - Todos os campos são obrigatórios'}), 400
+
+    # faz com que o status seja boolean
+    status = dados['status']
+    if isinstance(status, str):
+        status = status.lower() == 'true'
+
+    #contador
+    contador_ref = db.collection('controle_id').document('contador')
+    contador_doc = contador_ref.get().to_dict()
+    ultimo_id = contador_doc.get('id')
+    novo_id = int(ultimo_id) + 1
+    contador_ref.update({'id': novo_id})
+
+    db.collection('clientes').document(str(novo_id)).set({
+        "id": novo_id,
+        "nome": dados['nome'],
+        "cpf": dados['cpf'],
+        "status": status
+    })
+
+    return jsonify({'mensagem': 'Cliente cadastrado com sucesso!'}), 201
+
+
+
+# MÉTODO PUT - alterar cadastro
+@app.route('/clientes/<id>', methods=['PUT'])
+def alterar_cadastro(id):
+    dados = request.json
+
+    if "nome" not in dados or "cpf" not in dados or "status" not in dados:
+        return jsonify({'mensagem':'Erro - Todos os campos são obrigatórios'}), 400
+    
+    doc_ref = db.collection('clientes').document(id)
+    doc = doc_ref.get()
+
+    if doc.exists:
+        doc_ref.update({
+            "nome": dados['nome'],
+            "cpf": dados['cpf'],
+            "status": dados['status']
+        })
+
+        return jsonify({'mensagem':'Cadastro atualizado com sucesso!'}), 201
+    
+    else:
+        return jsonify({'mensagem':'Erro - Cliente não encontrado'}), 404
+    
+
+    #MÉTODO DELETE - excluir cadastro
+@app.route('/clientes/<id>', methods=['DELETE'])
+def excluir_cadastro(id):
+    doc_ref = db.collection('clientes').document(id)
+    doc = doc_ref.get()
+
+    if not doc.exists:
+        return jsonify({'mensagem':'Erro -  Cadastro não encontrado!'})
+    
+    doc_ref.delete()
+    return jsonify({'mensagem':'Cadastro excluido com sucesso!'})
+
+
+# MÉTODO GET - listar clientes
+@app.route('/clientes/lista', methods=['GET'])
+def clientes_lista():
+    clientes = []
+
+    lista = db.collection('clientes').stream()
+
+    for item in lista:
+        clientes.append(item.to_dict())
+
+    if clientes:
+        return jsonify(clientes), 200
+    else:
+        return jsonify({'mensagem': 'Erro! nenhuma cliente cadastrado'}), 404
+
+if __name__ == '__main__':
+    app.run()
