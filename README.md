@@ -3,6 +3,10 @@
 
 Este é um serviço de API RESTful desenvolvido com Flask, integrado ao Firebase Firestore para o gerenciamento de clientes. A API oferece operações de CRUD (Create, Read, Update, Delete) para clientes, incluindo a busca de clientes com base em campos específicos e a listagem de todos os clientes cadastrados.
 
+## Link do vercel
+[Clique aqui](https://projeto-academia-nu.vercel.app/)
+
+
 ## Funcionalidades
 
 A API possui as seguintes funcionalidades:
